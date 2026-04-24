@@ -8,7 +8,7 @@ This project consists of **four different versions** of a simple code editor, ea
 
 Each version introduces incremental improvements, allowing you to observe both technical progression and usability refinement.
 
-## 📂 Project Structure
+## 📂 Project Structures
 
 ```
 /project-root
