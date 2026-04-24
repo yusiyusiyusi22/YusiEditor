@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/x-icon" href="../../../Downloads/usss.png">
+<title>Text Editor</title>
+
+<style>
+:root {
+    --bg: #0b0b0e;
+    --card: rgba(255,255,255,0.05);
+    --border: rgba(255,255,255,0.1);
+    --primary: #0a84ff;
+    --text: #f5f5f7;
+    --secondary: #a1a1a6;
+    --danger: #ff453a;
+    --highlight: #ffd60a;
+    --shadow: 0 4px 30px rgba(0,0,0,0.3);
+    --radius: 24px;
+    --blur: saturate(180%) blur(20px);
+    --glass-blur: blur(40px);
+    --glass-opacity: 0.15;
+    --liquid-gradient: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                 "SF Pro Text", Helvetica, Arial, sans-serif;
+    background: radial-gradient(circle at center, #1c1c1e, #000);
+    color: var(--text);
+    padding: 60px 20px;
+    overflow-x: hidden;
+}
+
+.container {
+    max-width: 820px;
+    margin: auto;
+    background: var(--card);
+    backdrop-filter: var(--glass-blur);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    position: relative;
+}
+
+.container::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: var(--liquid-gradient);
+    animation: liquid-flow 20s linear infinite;
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+@keyframes liquid-flow {
+    0% { transform: translate(0, 0); }
+    50% { transform: translate(10%, 10%); }
+    100% { transform: translate(0, 0); }
+}
+
+.header {
+    padding: 24px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 20px;
+    font-weight: 600;
+    background: rgba(255,255,255,0.02);
+    backdrop-filter: var(--blur);
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    z-index: 1;
+}
+
+.saved-toggle {
+    background: rgba(10,132,255,0.2);
+    backdrop-filter: var(--glass-blur);
+    color: var(--primary);
+    border: 1px solid rgba(10,132,255,0.3);
+    padding: 12px 20px;
+    border-radius: 999px;
+    font-size: 15px;
+    cursor: pointer;
+    box-shadow: inset 0 1px 3px rgba(255,255,255,0.1), 0 4px 12px rgba(10,132,255,0.2);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.saved-toggle:hover {
+    background: rgba(10,132,255,0.3);
+    transform: translateY(-2px);
+}
+
+.saved-toggle:active {
+    transform: scale(0.98);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.editor {
+    padding: 32px;
+    min-height: 480px;
+    font-size: 17px;
+    line-height: 1.8;
+    outline: none;
+    background: transparent;
+    position: relative;
+    z-index: 1;
+}
+
+.info {
+    padding: 18px 28px;
+    font-size: 14px;
+    color: var(--secondary);
+    background: rgba(255,255,255,0.02);
+    backdrop-filter: var(--blur);
+    border-top: 1px solid var(--border);
+    position: relative;
+    z-index: 1;
+}
+
+.toolbar {
+    position: absolute;
+    display: none;
+    gap: 10px;
+    padding: 10px;
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: var(--glass-blur);
+    border-radius: 999px;
+    box-shadow: var(--shadow), inset 0 1px 3px rgba(255,255,255,0.1);
+    border: 1px solid var(--border);
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.toolbar.active {
+    display: flex;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.toolbar button {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(28,28,30,0.6);
+    backdrop-filter: var(--blur);
+    color: var(--text);
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.1), 0 2px 6px rgba(0,0,0,0.2);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.toolbar button:hover {
+    background: rgba(28,28,30,0.8);
+    transform: translateY(-2px);
+}
+
+.toolbar button:active {
+    transform: scale(0.95);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.highlight-btn { color: var(--highlight); }
+.save-btn { color: var(--primary); font-size: 22px; }
+.remove-btn { color: var(--danger); font-size: 20px; }
+.translate-btn { color: var(--primary); font-size: 20px; }
+
+.highlighted {
+    background: linear-gradient(135deg, rgba(255,214,10,0.3), rgba(255,159,10,0.3));
+    color: var(--text);
+    border-radius: 8px;
+    padding: 3px 8px;
+    box-shadow: 0 2px 4px rgba(255,214,10,0.2);
+}
+
+.translation-result {
+    position: absolute;
+    display: none;
+    max-width: 340px;
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: var(--glass-blur);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow), inset 0 1px 3px rgba(255,255,255,0.1);
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    z-index: 998;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.translation-result.active {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.translation-result .original {
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.translation-result .translated {
+    color: var(--secondary);
+    font-size: 15px;
+}
+
+.panel-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(5px);
+    z-index: 1999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.panel-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.saved-panel {
+    position: fixed;
+    right: -440px;
+    top: 0;
+    width: 440px;
+    height: 100vh;
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: var(--glass-blur);
+    box-shadow: -10px 0 40px rgba(0,0,0,0.5);
+    transition: right 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+}
+
+.saved-panel.open {
+    right: 0;
+}
+
+.saved-header {
+    padding: 28px;
+    font-size: 20px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+}
+
+.close-panel {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.close-panel:hover {
+    transform: rotate(90deg);
+}
+
+.close-panel:active {
+    transform: scale(0.9);
+}
+
+.saved-list {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.saved-item {
+    background: rgba(28,28,30,0.4);
+    backdrop-filter: var(--blur);
+    border-radius: 20px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.2);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.saved-item:hover {
+    transform: translateY(-2px);
+}
+
+.saved-item.removing {
+    opacity: 0;
+    transform: translateX(20px) scale(0.95);
+}
+
+.saved-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.saved-word {
+    font-weight: 600;
+}
+
+.saved-translation {
+    font-size: 14px;
+    color: var(--secondary);
+    margin-top: 6px;
+}
+
+.delete-saved {
+    background: transparent;
+    border: none;
+    color: var(--danger);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.delete-saved:hover {
+    background: rgba(255,69,58,0.2);
+}
+
+.delete-saved:active {
+    transform: scale(0.95);
+}
+
+.empty-state {
+    text-align: center;
+    color: var(--secondary);
+    margin-top: 80px;
+}
+
+.copy-all-btn {
+    position: absolute;
+    bottom: 28px;
+    right: 28px;
+    background: rgba(36,138,61,0.2);
+    backdrop-filter: var(--glass-blur);
+    color: #30d158;
+    border: 1px solid rgba(36,138,61,0.3);
+    padding: 14px 24px;
+    border-radius: 999px;
+    font-size: 15px;
+    cursor: pointer;
+    box-shadow: inset 0 1px 3px rgba(255,255,255,0.1), 0 4px 12px rgba(36,138,61,0.2);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 10;
+}
+
+.copy-all-btn:hover {
+    background: rgba(36,138,61,0.3);
+    transform: translateY(-2px);
+}
+
+.copy-all-btn:active {
+    transform: scale(0.98);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.copy-all-btn.copied {
+    background: rgba(40,167,69,0.3);
+    color: #fff;
+}
+</style>
+</head>
+
+<body>
+
+<div class="panel-overlay" id="panelOverlay"></div>
+
+<div class="container">
+    <div class="header">
+        <span>Text Editor</span>
+        <button class="saved-toggle" id="savedToggle">Saved</button>
+    </div>
+
+    <div class="editor" id="editor" contenteditable="true">
+        Paste your English text here. Select any word to translate.
+    </div>
+
+    <div class="info">
+        Select text to open tools · Ctrl+Z undo
+    </div>
+</div>
+
+<div class="toolbar" id="toolbar">
+    <button class="translate-btn" id="translateBtn">🌐</button>
+    <button class="remove-btn" id="removeBtn">←</button>
+    <button class="highlight-btn" id="highlightBtn">✓</button>
+    <button class="save-btn" id="saveBtn">↗</button>
+</div>
+
+<div class="translation-result" id="translationResult">
+    <div class="original" id="originalWord"></div>
+    <div class="translated" id="translatedWord"></div>
+</div>
+
+<div class="saved-panel" id="savedPanel">
+    <div class="saved-header">
+        <span>Saved Words</span>
+        <button class="close-panel" id="closePanel">–</button>
+    </div>
+    <div class="saved-list" id="savedList">
+        <div class="empty-state">No saved words</div>
+    </div>
+    <button class="copy-all-btn" id="copyAllBtn">Copy All</button>
+</div>
+
+<script>
+const editor = document.getElementById('editor');
+const toolbar = document.getElementById('toolbar');
+const translationResult = document.getElementById('translationResult');
+const originalWord = document.getElementById('originalWord');
+const translatedWord = document.getElementById('translatedWord');
+const translateBtn = document.getElementById('translateBtn');
+const highlightBtn = document.getElementById('highlightBtn');
+const removeBtn = document.getElementById('removeBtn');
+const saveBtn = document.getElementById('saveBtn');
+const savedToggle = document.getElementById('savedToggle');
+const savedPanel = document.getElementById('savedPanel');
+const closePanel = document.getElementById('closePanel');
+const savedList = document.getElementById('savedList');
+const panelOverlay = document.getElementById('panelOverlay');
+const copyAllBtn = document.getElementById('copyAllBtn');
+
+let selectedRange = null;
+let savedWords = [];
+let currentTranslation = '';
+let currentText = '';
+let history = [];
+let historyIndex = -1;
+let autoHideTimeout = null;
+
+function saveHistory() {
+    const currentContent = editor.innerHTML;
+    history = history.slice(0, historyIndex + 1);
+    history.push(currentContent);
+    historyIndex++;
+    if (history.length > 50) {
+        history.shift();
+        historyIndex--;
+    }
+}
+
+saveHistory();
+
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'z') {
+        e.preventDefault();
+        if (historyIndex > 0) {
+            historyIndex--;
+            editor.innerHTML = history[historyIndex];
+        }
+    }
+    if (e.ctrlKey && e.key === 'y') {
+        e.preventDefault();
+        if (historyIndex < history.length - 1) {
+            historyIndex++;
+            editor.innerHTML = history[historyIndex];
+        }
+    }
+});
+
+editor.addEventListener('input', function() {
+    saveHistory();
+});
+
+async function translateText(text) {
+    try {
+        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|az`);
+        const data = await res.json();
+        return data.responseData?.translatedText || 'Translation error';
+    } catch (error) {
+        return 'Translation error';
+    }
+}
+
+function startAutoHideTimer() {
+    if (autoHideTimeout) {
+        clearTimeout(autoHideTimeout);
+    }
+    autoHideTimeout = setTimeout(() => {
+        clearSelection();
+    }, 5000);
+}
+
+function resetAutoHideTimer() {
+    startAutoHideTimer();
+}
+
+editor.addEventListener('mouseup', handleSelection);
+editor.addEventListener('keyup', handleSelection);
+
+async function handleSelection() {
+    const selection = window.getSelection();
+    const text = selection.toString().trim();
+
+    if (!text) {
+        if (autoHideTimeout) {
+            clearTimeout(autoHideTimeout);
+        }
+        toolbar.classList.remove('active');
+        translationResult.classList.remove('active');
+        return;
+    }
+
+    currentText = text;
+    currentTranslation = '';
+    selectedRange = selection.getRangeAt(0);
+    const rect = selectedRange.getBoundingClientRect();
+
+    toolbar.classList.add('active');
+    toolbar.style.left = rect.left + rect.width / 2 - toolbar.offsetWidth / 2 + 'px';
+    toolbar.style.top = rect.bottom + 12 + window.scrollY + 'px';
+
+    translationResult.classList.remove('active');
+    
+    startAutoHideTimer();
+}
+
+translateBtn.onclick = async () => {
+    if (!currentText) return;
+    
+    resetAutoHideTimer();
+    
+    translationResult.classList.add('active');
+    const rect = selectedRange.getBoundingClientRect();
+    translationResult.style.left = rect.left + 'px';
+    translationResult.style.top = toolbar.getBoundingClientRect().bottom + 12 + window.scrollY + 'px';
+    
+    originalWord.textContent = currentText;
+    translatedWord.textContent = '...';
+    
+    currentTranslation = await translateText(currentText);
+    translatedWord.textContent = currentTranslation;
+};
+
+highlightBtn.onclick = () => {
+    if (!selectedRange) return;
+    resetAutoHideTimer();
+    saveHistory();
+    const span = document.createElement('span');
+    span.className = 'highlighted';
+    span.appendChild(selectedRange.extractContents());
+    selectedRange.insertNode(span);
+    clearSelection();
+};
+
+removeBtn.onclick = () => {
+    if (!selectedRange) return;
+    resetAutoHideTimer();
+    saveHistory();
+    const container = selectedRange.commonAncestorContainer;
+    let el = container.nodeType === 3 ? container.parentElement : container;
+    while (el && el !== editor) {
+        if (el.classList && el.classList.contains('highlighted')) {
+            const parent = el.parentNode;
+            while (el.firstChild) {
+                parent.insertBefore(el.firstChild, el);
+            }
+            parent.removeChild(el);
+            break;
+        }
+        el = el.parentElement;
+    }
+    clearSelection();
+};
+
+saveBtn.onclick = () => {
+    if (!currentText) return;
+    resetAutoHideTimer();
+    if (!savedWords.some(w => w.word === currentText)) {
+        savedWords.push({ 
+            word: currentText, 
+            translation: currentTranslation || 'not translated'
+        });
+        renderSaved();
+    }
+    clearSelection();
+};
+
+function renderSaved() {
+    if (savedWords.length === 0) {
+        savedList.innerHTML = '<div class="empty-state">No saved words</div>';
+    } else {
+        savedList.innerHTML = savedWords.map((item, i) => `
+            <div class="saved-item" data-index="${i}">
+                <div class="saved-item-header">
+                    <div>
+                        <div class="saved-word">${item.word}</div>
+                        <div class="saved-translation">${item.translation}</div>
+                    </div>
+                    <button class="delete-saved" onclick="deleteSaved(${i})">×</button>
+                </div>
+            </div>
+        `).join('');
+    }
+}
+
+window.deleteSaved = i => {
+    const itemElement = savedList.querySelector(`[data-index="${i}"]`);
+    if (itemElement) {
+        itemElement.classList.add('removing');
+        setTimeout(() => {
+            savedWords.splice(i, 1);
+            renderSaved();
+        }, 150);
+    }
+};
+
+copyAllBtn.onclick = () => {
+    if (savedWords.length === 0) return;
+    
+    const textToCopy = savedWords.map(item => `${item.word}\n${item.translation}`).join('\n\n');
+    
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        copyAllBtn.textContent = 'Copied!';
+        copyAllBtn.classList.add('copied');
+        
+        setTimeout(() => {
+            copyAllBtn.textContent = 'Copy All';
+            copyAllBtn.classList.remove('copied');
+        }, 2000);
+    });
+};
+
+function clearSelection() {
+    if (autoHideTimeout) {
+        clearTimeout(autoHideTimeout);
+    }
+    window.getSelection().removeAllRanges();
+    toolbar.classList.remove('active');
+    translationResult.classList.remove('active');
+    selectedRange = null;
+}
+
+savedToggle.onclick = () => {
+    savedPanel.classList.add('open');
+    panelOverlay.classList.add('active');
+};
+
+closePanel.onclick = () => {
+    savedPanel.classList.remove('open');
+    panelOverlay.classList.remove('active');
+};
+
+panelOverlay.onclick = () => {
+    savedPanel.classList.remove('open');
+    panelOverlay.classList.remove('active');
+};
+
+toolbar.addEventListener('mouseenter', () => {
+    if (autoHideTimeout) {
+        clearTimeout(autoHideTimeout);
+    }
+});
+
+toolbar.addEventListener('mouseleave', () => {
+    startAutoHideTimer();
+});
+
+translationResult.addEventListener('mouseenter', () => {
+    if (autoHideTimeout) {
+        clearTimeout(autoHideTimeout);
+    }
+});
+
+translationResult.addEventListener('mouseleave', () => {
+    startAutoHideTimer();
+});
+
+document.addEventListener('click', function(e) {
+    if (!toolbar.contains(e.target) && 
+        !editor.contains(e.target) && 
+        !translationResult.contains(e.target)) {
+        clearSelection();
+    }
+});
+
+editor.addEventListener('paste', function(e) {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    const selection = window.getSelection();
+    if (selection.rangeCount) {
+        selection.deleteFromDocument();
+        selection.getRangeAt(0).insertNode(document.createTextNode(text));
+    }
+});
+</script>
+
+</body>
+</html>

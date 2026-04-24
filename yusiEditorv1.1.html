@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="../../../../Downloads/usss.png">
+    <title>yusi Text Editor</title>
+    <style>
+        /* DESIGN UPDATED TO LIQUID GLASS STYLE (iOS-INSPIRED) */
+        :root {
+            --bg: #000000;
+            --card: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.08);
+            --primary: #007aff;
+            --text: #ffffff;
+            --secondary: #8e8e93;
+            --danger: #ff3b30;
+            --highlight: #ffcc00;
+            --shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            --radius: 24px;
+            --blur: saturate(180%) blur(20px);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                "SF Pro Text", Helvetica, Arial, sans-serif;
+            background: linear-gradient(to bottom, #1a1a1c, #000000);
+            color: var(--text);
+            padding: 40px 20px;
+            transition: background 0.5s ease;
+        }
+
+        /* --- FOCUS MODE STYLES --- */
+        body.focus-active {
+            background: #000000;
+        }
+
+        body.focus-active .container {
+            border-color: rgba(0, 123, 255, 0.2);
+            box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.8);
+            background: rgba(5, 5, 5, 0.9);
+        }
+
+        body.focus-active .header,
+        body.focus-active .info,
+        body.focus-active .footer button:not(#focusToggle) {
+            opacity: 0.1;
+            pointer-events: none;
+            filter: blur(2px);
+        }
+
+        body.focus-active #focusToggle {
+            box-shadow: 0 0 20px rgba(0, 123, 255, 0.5);
+        }
+
+        .container {
+            max-width: 820px;
+            margin: auto;
+            background: var(--card);
+            backdrop-filter: var(--blur);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: all 0.5s ease;
+        }
+
+        .header {
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 16px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid var(--border);
+            transition: opacity 0.3s;
+        }
+
+        .saved-toggle {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    border: none;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1;
+    cursor: pointer;
+    backdrop-filter: var(--blur);
+    transition:
+        background-color 0.15s ease,
+        opacity 0.15s ease;
+}
+
+.saved-toggle:active {
+    opacity: 0.75;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.saved-toggle:disabled {
+    background-color: rgba(166, 200, 255, 0.3);
+    cursor: default;
+    opacity: 0.6;
+}
+
+        .editor {
+            padding: 28px;
+            min-height: 440px;
+            font-size: 17px;
+            line-height: 1.7;
+            outline: none;
+        }
+
+        .toolbar {
+            position: absolute;
+            display: none;
+            gap: 8px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(30px);
+            border-radius: 999px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(8px) scale(0.95);
+            transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .toolbar.active {
+            display: flex;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .toolbar button {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: var(--secondary);
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s;
+        }
+
+        .toolbar button:active {
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .highlight-btn {
+            color: var(--highlight);
+        }
+
+        .save-btn {
+            color: var(--primary);
+            font-size: 20px;
+        }
+
+        .remove-btn {
+            color: var(--danger);
+            font-size: 18px;
+        }
+
+        .translate-btn {
+            color: var(--primary);
+            font-size: 18px;
+        }
+
+        .highlighted {
+            background: rgba(255, 204, 0, 0.2);
+            color: inherit;
+            border-radius: 6px;
+            padding: 2px 6px;
+        }
+
+        .translation-result {
+            position: absolute;
+            display: none;
+            max-width: 320px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(30px);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 16px 18px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 998;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .translation-result.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .translation-result .original {
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .translation-result .translated {
+            color: var(--secondary);
+            font-size: 15px;
+        }
+
+        .panel-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            z-index: 1999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .panel-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .saved-panel {
+            position: fixed;
+            right: -420px;
+            top: 0;
+            width: 420px;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(30px);
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.4);
+            transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .saved-panel.open {
+            right: 0;
+        }
+
+        .saved-header {
+            padding: 24px;
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .close-panel {
+            background: none;
+            border: none;
+            font-size: 26px;
+            color: var(--secondary);
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .close-panel:active {
+            transform: scale(0.9);
+        }
+
+        .saved-list {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .saved-item {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            transition: opacity 0.15s ease, transform 0.15s ease;
+            cursor: pointer;
+        }
+
+        .saved-item.removing {
+            opacity: 0;
+            transform: translateX(10px);
+        }
+
+        .saved-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .saved-word {
+            font-weight: 600;
+        }
+
+        .saved-translation {
+            font-size: 14px;
+            color: var(--secondary);
+            margin-top: 4px;
+        }
+
+        .delete-saved {
+            background: transparent;
+            border: none;
+            color: var(--danger);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 50%;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .delete-saved:active {
+            transform: scale(0.95);
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--secondary);
+            margin-top: 60px;
+        }
+
+        .copy-all-btn {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            background: linear-gradient(135deg, rgba(48, 209, 88, 0.8), rgba(40, 167, 69, 0.8));
+            color: #fff;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 999px;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(36, 138, 61, 0.3);
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
+        }
+
+        .copy-all-btn:active {
+            transform: scale(0.95);
+        }
+
+        .copy-all-btn.copied {
+            background: linear-gradient(135deg, rgba(48, 209, 88, 1), rgba(40, 167, 69, 1));
+        }
+
+        .footer {
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.03);
+            border-top: 1px solid var(--border);
+            transition: opacity 0.3s;
+        }
+
+        /* New styles for images in the editor */
+        .editor img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 10px auto;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<audio id="focusOnSound"  src="open.mp3"  preload="auto"></audio>
+<audio id="focusOffSound" src="close.mp3" preload="auto"></audio>
+<body>
+    <div class="panel-overlay" id="panelOverlay"></div>
+    <audio id="focusOnSound" preload="auto">
+    <source src="focus-on.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="focusOffSound" preload="auto">
+    <source src="focus-off.mp3" type="audio/mpeg">
+</audio>
+    <div class="container">
+        <div class="header">
+            <span>yusi Editor</span>
+            <span style="font-size:12px; color:var(--secondary); font-weight:normal;">v2.0 Pro</span>
+        </div>
+        <div class="editor" id="editor" contenteditable="true" spellcheck="false" autocomplete="off" autocorrect="off"
+            autocapitalize="off">
+            Paste your IELTS reading text here. Select words for analysis.
+        </div>
+        <div class="footer">
+            <button class="saved-toggle" id="imageUploadBtn">+</button> <!-- New + button added to the left of Vocabulary -->
+            <button class="saved-toggle" id="savedToggle">Vocabulary</button>
+            <button class="saved-toggle" id="advantageToggle">Advantage</button>
+            <button class="saved-toggle" id="focusToggle"
+                style="background: #007BFF;">Focus Mode</button>
+        </div>
+    </div>
+    <div class="toolbar" id="toolbar">
+        <button class="translate-btn" id="translateBtn" title="Analyze & Translate">🌐</button>
+        <button class="remove-btn" id="removeBtn" title="Clear Highlight">←</button>
+        <button class="highlight-btn" id="highlightBtn" title="Highlight">✓</button>
+        <button class="save-btn" id="saveBtn" title="Save to Vocab List">↗</button>
+    </div>
+    <div class="translation-result" id="translationResult">
+        <div class="original" id="originalWord"></div>
+        <div class="translated" id="translatedWord"></div>
+    </div>
+    <div class="saved-panel" id="savedPanel">
+        <div class="saved-header">
+            <span>Saved Vocabulary</span>
+            <button class="close-panel" id="closePanel">–</button>
+        </div>
+        <div class="saved-list" id="savedList">
+            <div class="empty-state">No saved words</div>
+        </div>
+        <button class="copy-all-btn" id="copyAllBtn">Copy All</button>
+    </div>
+    <script src="https://unpkg.com/compromise@14.14.0/builds/compromise.min.js"></script>
+    <script>
+        /**
+         * REFACTORED LOGIC FOR IELTS PREPARATION
+         * Focus: Persistence, Context Analysis, Learning Effectiveness
+         */
+        // --- Configuration & State ---
+        const CONFIG = {
+            storageKeys: {
+                content: 'ielts_editor_content',
+                words: 'ielts_saved_words',
+                focus: 'ielts_focus_mode',
+                advantage: 'ielts_advantage_mode' // Added for persistence
+            },
+            weakWordThreshold: 3 // If looked up 3 times, it's a weak word
+        };
+        let appState = {
+            savedWords: [],
+            currentSelection: {
+                text: '',
+                isSentence: false,
+                range: null,
+                context: '',
+                analysis: null
+            },
+            advantageMode: false,
+            originalContent: '',
+            autoHideTimeout: null,
+            history: [],
+            historyIndex: -1,
+            focusMode: false
+        };
+        // --- DOM Elements ---
+        const DOM = {
+            editor: document.getElementById('editor'),
+            toolbar: document.getElementById('toolbar'),
+            translationResult: document.getElementById('translationResult'),
+            originalWord: document.getElementById('originalWord'),
+            translatedWord: document.getElementById('translatedWord'),
+            translateBtn: document.getElementById('translateBtn'),
+            highlightBtn: document.getElementById('highlightBtn'),
+            removeBtn: document.getElementById('removeBtn'),
+            saveBtn: document.getElementById('saveBtn'),
+            savedToggle: document.getElementById('savedToggle'),
+            focusToggle: document.getElementById('focusToggle'),
+            advantageToggle: document.getElementById('advantageToggle'),
+            imageUploadBtn: document.getElementById('imageUploadBtn'), // New DOM element for image upload button
+            savedPanel: document.getElementById('savedPanel'),
+            closePanel: document.getElementById('closePanel'),
+            savedList: document.getElementById('savedList'),
+            panelOverlay: document.getElementById('panelOverlay'),
+            copyAllBtn: document.getElementById('copyAllBtn')
+        };
+        // --- 2. Persistence Layer ---
+        function initPersistence() {
+            // Load Content
+            const savedContent = localStorage.getItem(CONFIG.storageKeys.content);
+            if (savedContent) {
+                DOM.editor.innerHTML = savedContent;
+            }
+            // Load Words
+            const savedWordsData = localStorage.getItem(CONFIG.storageKeys.words);
+            if (savedWordsData) {
+                appState.savedWords = JSON.parse(savedWordsData);
+            }
+            // Load Focus Mode
+            appState.focusMode = localStorage.getItem(CONFIG.storageKeys.focus) === 'true';
+            if (appState.focusMode) {
+                applyFocusHighlights();
+            }
+            // Load Advantage Mode
+            appState.advantageMode = localStorage.getItem(CONFIG.storageKeys.advantage) === 'true';
+            if (appState.advantageMode) {
+                applyB2Highlights();
+                DOM.advantageToggle.style.background = '#1c2e42';
+            }
+            // Save history
+            saveHistory();
+            renderSaved();
+        }
+        function persistData() {
+            localStorage.setItem(CONFIG.storageKeys.content, DOM.editor.innerHTML);
+            localStorage.setItem(CONFIG.storageKeys.words, JSON.stringify(appState.savedWords));
+            localStorage.setItem(CONFIG.storageKeys.focus, appState.focusMode);
+            localStorage.setItem(CONFIG.storageKeys.advantage, appState.advantageMode);
+        }
+        // --- 4. Context & IELTS Analysis Logic ---
+        // Helper to find the full sentence surrounding the selection
+        function extractContextSentence(range) {
+            let container = range.commonAncestorContainer;
+            if (container.nodeType === 3) container = container.parentNode;
+
+            // Simple sentence extraction (looking for blocks or text content)
+            // For a robust implementation in a DOM editor, we grab the paragraph text
+            const block = container.closest('div, p') || DOM.editor;
+            const fullText = block.innerText;
+            const selText = range.toString();
+
+            // Simple heuristic to split sentences
+            const sentences = fullText.split(/[.!?]+/);
+            const found = sentences.find(s => s.includes(selText));
+            return found ? found.trim() + '.' : selText; // Return sentence or fallback
+        }
+        async function getDefinition(word) {
+            try {
+                const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+                const data = await res.json();
+                if (!Array.isArray(data) || data[0].title === "No Definitions Found") {
+                    return 'No definition found';
+                }
+                const entry = data[0];
+                const def = entry.meanings[0].definitions[0];
+                let result = def.definition;
+                if (def.example) result += `\nIELTS Example: ${def.example}`;
+                return result;
+            } catch {
+                return 'Error fetching definition';
+            }
+        }
+        // Heuristic engine to simulate IELTS Analysis (since no backend is allowed)
+        async function performIELTSAnalysis(text) {
+            const wordCount = text.split(/\s+/).length;
+            const cleanText = text.trim();
+
+            // 5. Sentence Level Analysis
+            if (wordCount > 3) {
+                const doc = nlp(cleanText);
+                const subject = doc.subjects().text() || 'N/A';
+                const verb = doc.verbs().text() || 'N/A';
+                const object = doc.objects().text() || 'N/A';
+                return {
+                    type: 'sentence',
+                    label: 'Sentence Structure',
+                    cefr: 'N/A',
+                    meaning: `Subject: ${subject}\nMain Verb: ${verb}\nObject/Complement: ${object}`,
+                    extra: `Key components detected in: "${cleanText.substring(0, 20)}..."`
+                };
+            }
+            // 6. Vocabulary Labeling (Heuristic)
+            let cefr = 'B1';
+            let label = 'General';
+            const len = cleanText.length;
+
+            // Simple heuristics for demo purposes
+            if (cleanText.match(/tion$|ment$|ence$|ity$/)) {
+                cefr = 'C1';
+                label = 'Academic / Formal';
+            } else if (cleanText.match(/ing$/)) {
+                cefr = 'B2';
+                label = 'Activity / Process';
+            } else if (len > 8) {
+                cefr = 'B2+';
+                label = 'Academic';
+            } else if (len < 5) {
+                cefr = 'A2';
+                label = 'Common / Spoken';
+            }
+            const definition = await getDefinition(cleanText);
+            return {
+                type: 'word',
+                cefr: cefr,
+                label: label,
+                meaning: definition,
+                example: `Use "${cleanText}" in your IELTS Writing Task 2.`
+            };
+        }
+        function isAcademic(word) {
+            const academicWords = new Set([
+                'academic', 'vocabulary', 'coherence', 'cohesion', 'lexical', 'resource', 'grammatical', 'range',
+                'accuracy', 'pronunciation', 'fluency', 'task', 'response', 'band', 'criterion', 'paraphrase',
+                'synonym', 'collocation', 'idiom', 'phrasal', 'verb', 'passive', 'voice', 'conditional'
+            ]);
+            return academicWords.has(word.toLowerCase()) || word.length > 7;
+        }
+        function applyFocusHighlights() {
+            const walker = document.createTreeWalker(DOM.editor, NodeFilter.SHOW_TEXT);
+            const nodes = [];
+            while (walker.nextNode()) {
+                nodes.push(walker.currentNode);
+            }
+            for (let node of nodes) {
+                const text = node.textContent;
+                if (!text.trim()) continue;
+                const parent = node.parentNode;
+                if (parent.classList.contains('highlighted')) continue;
+                const doc = nlp(text);
+                const phrasals = doc.phrasalVerbs().out('array');
+                let offset = 0;
+                const regex = /\b(\w+)\b/g;
+                let match;
+                while ((match = regex.exec(text))) {
+                    const word = match[1];
+                    const start = match.index;
+                    const end = start + word.length;
+                    let isPhrasalPart = phrasals.some(p => p.includes(word));
+                    if (isAcademic(word) || isPhrasalPart) {
+                        const span = document.createElement('span');
+                        span.className = 'highlighted';
+                        span.textContent = text.substring(offset, end);
+                        parent.insertBefore(span, node);
+                    } else {
+                        parent.insertBefore(document.createTextNode(text.substring(offset, end)), node);
+                    }
+                    offset = end;
+                }
+                if (offset < text.length) {
+                    parent.insertBefore(document.createTextNode(text.substring(offset)), node);
+                }
+                parent.removeChild(node);
+            }
+        }
+        function applyB2Highlights() {
+            const walker = document.createTreeWalker(DOM.editor, NodeFilter.SHOW_TEXT);
+            const nodes = [];
+            while (walker.nextNode()) {
+                nodes.push(walker.currentNode);
+            }
+            for (let node of nodes) {
+                const text = node.textContent;
+                if (!text.trim()) continue;
+                const parent = node.parentNode;
+                if (parent.classList.contains('highlighted')) continue;
+                let offset = 0;
+                const regex = /\b(\w+)\b/g;
+                let match;
+                while ((match = regex.exec(text))) {
+                    const word = match[1];
+                    const start = match.index;
+                    const end = start + word.length;
+                    const len = word.length;
+                    let cefr = 'B1';
+                    if (word.match(/tion$|ment$|ence$|ity$/)) {
+                        cefr = 'C1';
+                    } else if (word.match(/ing$/)) {
+                        cefr = 'B2';
+                    } else if (len > 8) {
+                        cefr = 'B2+';
+                    } else if (len < 5) {
+                        cefr = 'A2';
+                    }
+                    if (cefr.startsWith('B2')) {
+                        const span = document.createElement('span');
+                        span.className = 'highlighted';
+                        span.textContent = text.substring(offset, end);
+                        parent.insertBefore(span, node);
+                    } else {
+                        parent.insertBefore(document.createTextNode(text.substring(offset, end)), node);
+                    }
+                    offset = end;
+                }
+                if (offset < text.length) {
+                    parent.insertBefore(document.createTextNode(text.substring(offset)), node);
+                }
+                parent.removeChild(node);
+            }
+        }
+        function removeB2Highlights() {
+            const highlights = DOM.editor.querySelectorAll('.highlighted');
+            highlights.forEach(highlight => {
+                const parent = highlight.parentNode;
+                while (highlight.firstChild) {
+                    parent.insertBefore(highlight.firstChild, highlight);
+                }
+                parent.removeChild(highlight);
+            });
+        }
+        // --- Undo/Redo System ---
+        function saveHistory() {
+            const currentContent = DOM.editor.innerHTML;
+            // Don't save duplicate states
+            if (appState.history[appState.historyIndex] === currentContent) return;
+
+            appState.history = appState.history.slice(0, appState.historyIndex + 1);
+            appState.history.push(currentContent);
+            appState.historyIndex++;
+            if (appState.history.length > 50) {
+                appState.history.shift();
+                appState.historyIndex--;
+            }
+            persistData(); // Auto-save on every history push
+        }
+        // --- Event Listeners ---
+        document.addEventListener('keydown', function (e) {
+            if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                if (appState.historyIndex > 0) {
+                    appState.historyIndex--;
+                    DOM.editor.innerHTML = appState.history[appState.historyIndex];
+                    persistData();
+                }
+            }
+            if (e.ctrlKey && e.key === 'y') {
+                e.preventDefault();
+                if (appState.historyIndex < appState.history.length - 1) {
+                    appState.historyIndex++;
+                    DOM.editor.innerHTML = appState.history[appState.historyIndex];
+                    persistData();
+                }
+            }
+        });
+        DOM.editor.addEventListener('input', () => {
+            saveHistory();
+        });
+        // Selection Logic
+        function startAutoHideTimer() {
+            if (appState.autoHideTimeout) clearTimeout(appState.autoHideTimeout);
+            appState.autoHideTimeout = setTimeout(clearSelection, 5000);
+        }
+        function handleSelection() {
+            const selection = window.getSelection();
+            const text = selection.toString().trim();
+            if (!text) {
+                DOM.toolbar.classList.remove('active');
+                DOM.translationResult.classList.remove('active');
+                return;
+            }
+            // 7. IELTS Focus: Ignore very short generic words unless highlighted manually
+            if (text.length < 2 && !CONFIG.isManual) {
+                // Optional: logic to skip short noise words
+            }
+            const range = selection.getRangeAt(0);
+            appState.currentSelection = {
+                text: text,
+                isSentence: text.split(' ').length > 3,
+                range: range,
+                context: extractContextSentence(range),
+                analysis: null // Will be set async if needed
+            };
+            const rect = range.getBoundingClientRect();
+            DOM.toolbar.classList.add('active');
+            DOM.toolbar.style.left = (rect.left + rect.width / 2 - DOM.toolbar.offsetWidth / 2) + 'px';
+            DOM.toolbar.style.top = (rect.bottom + 12 + window.scrollY) + 'px';
+            DOM.translationResult.classList.remove('active');
+            startAutoHideTimer();
+        }
+        DOM.editor.addEventListener('mouseup', handleSelection);
+        DOM.editor.addEventListener('keyup', (e) => {
+            if (e.key === 'Shift' || e.key.startsWith('Arrow')) handleSelection();
+        });
+        // --- Action Handlers ---
+        // API Translation
+        async function fetchTranslation(text) {
+            try {
+                const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|az`);
+                const data = await res.json();
+                return data.responseData?.translatedText || 'No translation found';
+            } catch (error) {
+                return 'Network error';
+            }
+        }
+        DOM.translateBtn.onclick = async () => {
+            if (!appState.currentSelection.text) return;
+            startAutoHideTimer(); // Reset timer
+            DOM.translationResult.classList.add('active');
+            const rect = appState.currentSelection.range.getBoundingClientRect();
+            DOM.translationResult.style.left = rect.left + 'px';
+            // Position below toolbar
+            const toolbarRect = DOM.toolbar.getBoundingClientRect();
+            DOM.translationResult.style.top = (toolbarRect.bottom + 8 + window.scrollY) + 'px';
+
+            // Perform analysis async
+            appState.currentSelection.analysis = await performIELTSAnalysis(appState.currentSelection.text);
+            const analysis = appState.currentSelection.analysis;
+
+            // Display Analysis
+            DOM.originalWord.innerHTML = `${appState.currentSelection.text} <span style="font-size:12px; color:var(--highlight); margin-left:8px; border:1px solid var(--highlight); padding:1px 4px; border-radius:4px;">${analysis.cefr || 'N/A'}</span>`;
+
+            DOM.translatedWord.innerHTML = `<em>Analysis...</em>`;
+            // 4. Context-based Meaning (Async)
+            const translation = await fetchTranslation(appState.currentSelection.text);
+
+            let resultHTML = `<div style="color:#fff; margin-bottom:4px;">${translation}</div>`;
+
+            if (appState.currentSelection.isSentence) {
+                resultHTML += `<div style="font-size:13px; margin-top:6px; color:var(--secondary);">
+            <strong>Structure:</strong> ${analysis.meaning}
+        </div>`;
+            } else {
+                resultHTML += `<div style="font-size:13px; margin-top:6px; color:var(--secondary);">
+            <strong>English Meaning:</strong> ${analysis.meaning}<br>
+            <strong>Type:</strong> ${analysis.label}<br>
+            <strong>Context:</strong> <em>"${analysis.example}"</em>
+        </div>`;
+            }
+            DOM.translatedWord.innerHTML = resultHTML;
+
+            // Update current selection state with result for saving
+            appState.currentSelection.translation = translation;
+            appState.currentSelection.definition = analysis.meaning;
+        };
+        DOM.highlightBtn.onclick = () => {
+            if (!appState.currentSelection.range) return;
+            saveHistory(); // Snapshot before change
+
+            const span = document.createElement('span');
+            span.className = 'highlighted';
+            span.appendChild(appState.currentSelection.range.extractContents());
+            appState.currentSelection.range.insertNode(span);
+
+            // Persist immediately
+            persistData();
+            clearSelection();
+        };
+        DOM.removeBtn.onclick = () => {
+            if (!appState.currentSelection.range) return;
+            saveHistory();
+
+            const container = appState.currentSelection.range.commonAncestorContainer;
+            let el = container.nodeType === 3 ? container.parentElement : container;
+
+            // Traverse up to find highlighted span
+            while (el && el !== DOM.editor) {
+                if (el.classList && el.classList.contains('highlighted')) {
+                    const parent = el.parentNode;
+                    while (el.firstChild) {
+                        parent.insertBefore(el.firstChild, el);
+                    }
+                    parent.removeChild(el);
+                    break;
+                }
+                el = el.parentElement;
+            }
+            persistData();
+            clearSelection();
+        };
+        // 3. Word Saving Logic (Enhanced)
+        DOM.saveBtn.onclick = async () => {
+            const sel = appState.currentSelection;
+            if (!sel.text || sel.isSentence) return; // Do not save sentences
+
+            // Avoid duplicates
+            if (!appState.savedWords.some(w => w.word === sel.text)) {
+
+                // Ensure we have a translation if not already fetched
+                let trans = sel.translation;
+                if (!trans) {
+                    trans = await fetchTranslation(sel.text);
+                }
+                let def = sel.definition;
+                if (!def) {
+                    def = await getDefinition(sel.text);
+                }
+                const newWord = {
+                    id: Date.now(),
+                    word: sel.text,
+                    translation: trans,
+                    definition: def,
+                    cefr: sel.analysis.cefr,
+                    tag: sel.analysis.label,
+                    reviewCount: 0,
+                    timestamp: new Date().toISOString()
+                };
+                appState.savedWords.push(newWord);
+                persistData();
+                renderSaved();
+            }
+            clearSelection();
+        };
+        // --- Saved Panel Logic ---
+        // 8. Vocabulary Review Logic (Active Recall)
+        function renderSaved() {
+            if (appState.savedWords.length === 0) {
+                DOM.savedList.innerHTML = '<div class="empty-state">No saved words</div>';
+            } else {
+                // Sort by newest first
+                const sorted = [...appState.savedWords].reverse();
+
+                DOM.savedList.innerHTML = sorted.map((item, i) => `
+            <div class="saved-item" onclick="toggleTranslation(this, ${item.id})">
+                <div class="saved-item-header">
+                    <div style="width:100%">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span class="saved-word">${item.word}${item.reviewCount >= CONFIG.weakWordThreshold ? ' (weak)' : ''}</span>
+                            <span style="font-size:11px; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">${item.cefr || '?'}</span>
+                        </div>
+                       
+                        <div class="saved-translation" style="display:none; margin-top:8px; border-top:1px solid rgba(255,255,255,0.1); padding-top:6px;">
+                            <div style="color:#fff; font-size:15px;">${item.translation}</div>
+                            <div style="font-size:12px; margin-top:4px; font-style:italic;">Definition: ${item.definition}</div>
+                            <div style="font-size:11px; margin-top:4px; color:var(--highlight);">${item.tag}</div>
+                        </div>
+                    </div>
+                    <button class="delete-saved" onclick="deleteSaved(event, ${item.id})">×</button>
+                </div>
+            </div>
+        `).join('');
+            }
+        }
+        // 9. Weak-word detection & Active Recall Toggle
+        window.toggleTranslation = (element, id) => {
+            const transDiv = element.querySelector('.saved-translation');
+            const isHidden = transDiv.style.display === 'none';
+
+            // Toggle visibility
+            transDiv.style.display = isHidden ? 'block' : 'none';
+
+            if (isHidden) {
+                // Find word and increment review count logic (Weak Word Detection)
+                const wordObj = appState.savedWords.find(w => w.id === id);
+                if (wordObj) {
+                    wordObj.reviewCount++;
+                    persistData();
+                    if (wordObj.reviewCount === CONFIG.weakWordThreshold) {
+                        renderSaved(); // Re-render to show (weak)
+                    }
+                }
+            }
+        };
+        window.deleteSaved = (e, id) => {
+            e.stopPropagation(); // Prevent toggling when deleting
+            const index = appState.savedWords.findIndex(w => w.id === id);
+            if (index > -1) {
+                // Visual removal
+                const items = document.querySelectorAll('.saved-item');
+                // Find the visual element corresponding to this data (reverse index logic is tricky, rely on DOM ref)
+                // Simplification: Re-render is fast enough for this list size, but lets animate
+                appState.savedWords.splice(index, 1);
+                persistData();
+                renderSaved();
+            }
+        };
+        DOM.copyAllBtn.onclick = () => {
+            if (appState.savedWords.length === 0) return;
+
+            const textToCopy = appState.savedWords.map(item =>
+                `${item.word}${item.reviewCount >= CONFIG.weakWordThreshold ? ' (weak)' : ''} (${item.cefr})\nMeaning: ${item.translation}\nDefinition: ${item.definition}`
+            ).join('\n\n----------------\n\n');
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                DOM.copyAllBtn.textContent = 'Copied!';
+                DOM.copyAllBtn.classList.add('copied');
+                setTimeout(() => {
+                    DOM.copyAllBtn.textContent = 'Copy All';
+                    DOM.copyAllBtn.classList.remove('copied');
+                }, 2000);
+            });
+        };
+        function clearSelection() {
+            if (appState.autoHideTimeout) clearTimeout(appState.autoHideTimeout);
+            window.getSelection().removeAllRanges();
+            DOM.toolbar.classList.remove('active');
+            DOM.translationResult.classList.remove('active');
+            appState.currentSelection = { text: '' };
+        }
+        function toggleFocusMode() {
+    appState.focusMode = !appState.focusMode;
+    document.body.classList.toggle('focus-active', appState.focusMode);
+    
+    const btn = DOM.focusToggle;
+    if (appState.focusMode) {
+        btn.innerHTML = "Exit Focus";
+        DOM.editor.setAttribute('spellcheck', 'false');
+
+        // Focus ON səsini çal
+        const onSound = document.getElementById('focusOnSound');
+        onSound.currentTime = 0;           // hər dəfə başdan başlasın
+        onSound.play().catch(e => console.log("Sound play error:", e));
+    } else {
+        btn.innerHTML = "Focus Mode";
+
+        // Focus OFF səsini çal
+        const offSound = document.getElementById('focusOffSound');
+        offSound.currentTime = 0;
+        offSound.play().catch(e => console.log("Sound play error:", e));
+    }
+}
+        // --- UI Panel Toggles ---
+        DOM.savedToggle.onclick = () => {
+            appState.savedWords.sort(() => Math.random() - 0.5); // Random for review
+            renderSaved();
+            DOM.savedPanel.classList.add('open');
+            DOM.panelOverlay.classList.add('active');
+        };
+        DOM.focusToggle.onclick = () => {
+            toggleFocusMode();
+        };
+        DOM.advantageToggle.onclick = () => {
+            appState.advantageMode = !appState.advantageMode;
+            if (appState.advantageMode) {
+                applyB2Highlights();
+                DOM.advantageToggle.style.background = '#1c2e42';
+            } else {
+                removeB2Highlights();
+                DOM.advantageToggle.style.background = '#2B2B2D';
+            }
+            persistData();
+        };
+        const closeAll = () => {
+            DOM.savedPanel.classList.remove('open');
+            DOM.panelOverlay.classList.remove('active');
+        };
+        DOM.closePanel.onclick = closeAll;
+        DOM.panelOverlay.onclick = closeAll;
+        // --- Hover Logic ---
+        DOM.toolbar.addEventListener('mouseenter', () => clearTimeout(appState.autoHideTimeout));
+        DOM.toolbar.addEventListener('mouseleave', startAutoHideTimer);
+        DOM.translationResult.addEventListener('mouseenter', () => clearTimeout(appState.autoHideTimeout));
+        DOM.translationResult.addEventListener('mouseleave', startAutoHideTimer);
+        // Click outside to close tools
+        document.addEventListener('click', function (e) {
+            if (!DOM.toolbar.contains(e.target) &&
+                !DOM.editor.contains(e.target) &&
+                !DOM.translationResult.contains(e.target) &&
+                !e.target.closest('.saved-item') // Allow clicking saved items
+            ) {
+                clearSelection();
+            }
+        });
+        // Clean Paste Logic
+        DOM.editor.addEventListener('paste', function (e) {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text');
+            const selection = window.getSelection();
+            if (selection.rangeCount) {
+                selection.deleteFromDocument();
+                selection.getRangeAt(0).insertNode(document.createTextNode(text));
+                saveHistory(); // Save state after paste
+            }
+            if (appState.focusMode) {
+                applyFocusHighlights();
+            }
+        });
+
+        // --- New Image Upload Functionality ---
+        DOM.imageUploadBtn.onclick = () => {
+            // Create a hidden file input
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.style.display = 'none';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = document.createElement('img');
+                        img.src = event.target.result;
+                        img.contentEditable = 'false'; // Prevent editing the image itself
+                        img.style.display = 'block';
+                        img.style.margin = '0 auto'; // Center the image
+
+                        // Insert at the beginning of the editor
+                        const range = document.createRange();
+                        range.setStart(DOM.editor, 0);
+                        range.collapse(true);
+                        const fragment = range.createContextualFragment('<br>'); // Add a line break after image for text
+                        DOM.editor.insertBefore(img, DOM.editor.firstChild); // Insert image at the top
+                        DOM.editor.insertBefore(fragment, img.nextSibling); // Add break after image
+
+                        saveHistory(); // Save state after inserting image
+                        persistData(); // Persist the updated content
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+            document.body.appendChild(input);
+            input.click();
+            document.body.removeChild(input);
+        };
+
+        // --- Initialization ---
+        initPersistence();
+    </script>
+</body>
+
+</html>
